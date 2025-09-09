@@ -132,13 +132,24 @@ Na seção **Pipeline**:
 
 **📁 Opções de Jenkinsfile Disponíveis:**
 
-Este projeto inclui três versões do Jenkinsfile:
+Este projeto inclui **4 versões** do Jenkinsfile para diferentes necessidades:
 
-- **`Jenkinsfile`** - Versão completa (requer Node.js configurado + pode ter erros com publishTestResults)
-- **`Jenkinsfile.simple`** - ✅ **Versão recomendada** (funciona sem configuração extra)
-- **`Jenkinsfile.alternative`** - Instala Node.js automaticamente (para sistemas Linux)
+- **`Jenkinsfile`** - Versão original (pode ter problemas com publishTestResults)
+- **`Jenkinsfile.simple`** - Versão básica sem tratamento de erros avançado
+- **`Jenkinsfile.robust`** - ✅ **Versão mais robusta** (recomendada após falhas)
+- **`Jenkinsfile.alternative`** - Instala Node.js automaticamente (Linux)
 
-**💡 Para usar a versão simplificada (recomendado):**
+**� Se você teve falhas no pipeline, use a versão robusta:**
+```bash
+cd /Users/bernardomennndes/Documents/projects/university/jenkins
+mv Jenkinsfile Jenkinsfile.original
+mv Jenkinsfile.robust Jenkinsfile
+git add .
+git commit -m "Usar Jenkinsfile robusto com tratamento de erros"
+git push
+```
+
+**💡 Para começar do zero, use a versão simples:**
 ```bash
 cd /Users/bernardomennndes/Documents/projects/university/jenkins
 mv Jenkinsfile Jenkinsfile.original

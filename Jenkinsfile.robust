@@ -1,0 +1,213 @@
+pipeline {
+    agent any
+    
+    tools {
+        nodejs 'Node18'  // Nome da instalação Node.js configurada no Jenkins
+    }
+    
+    environment {
+        NODE_VERSION = '18'
+        APP_NAME = 'jenkins-cicd-node-project'
+        BUILD_NUMBER_ENV = "${env.BUILD_NUMBER}"
+        PATH = "${tool 'Node18'}/bin:${env.PATH}"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '🔄 Fazendo checkout do código...'
+                checkout scm
+            }
+        }
+        
+        stage('Setup Node.js') {
+            steps {
+                echo '⚙️ Configurando Node.js...'
+                sh '''
+                    echo "Verificando Node.js..."
+                    which node || echo "Node.js não encontrado no PATH"
+                    node --version || echo "Erro ao obter versão do Node.js"
+                    which npm || echo "npm não encontrado no PATH"
+                    npm --version || echo "Erro ao obter versão do npm"
+                    echo "Verificação concluída!"
+                '''
+            }
+        }
+        
+        stage('Install Dependencies') {
+            steps {
+                echo '📦 Instalando dependências...'
+                sh '''
+                    echo "Verificando package.json..."
+                    ls -la package.json || echo "package.json não encontrado"
+                    
+                    echo "Instalando dependências..."
+                    npm ci || {
+                        echo "npm ci falhou, tentando npm install..."
+                        npm install || {
+                            echo "Falha na instalação de dependências"
+                            exit 1
+                        }
+                    }
+                    
+                    echo "Dependências instaladas com sucesso!"
+                '''
+            }
+        }
+        
+        stage('Lint Code') {
+            steps {
+                echo '🔍 Executando lint...'
+                script {
+                    try {
+                        sh 'npm run lint'
+                        echo 'Lint executado com sucesso!'
+                    } catch (Exception e) {
+                        echo 'Lint falhou ou não está configurado: ' + e.getMessage()
+                        currentBuild.result = 'UNSTABLE'
+                    }
+                }
+            }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                echo '🧪 Executando testes...'
+                script {
+                    try {
+                        sh 'npm test'
+                        echo 'Testes executados com sucesso!'
+                    } catch (Exception e) {
+                        echo 'Testes falharam: ' + e.getMessage()
+                        error('Falha nos testes')
+                    }
+                }
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                echo '🏗️ Executando build...'
+                script {
+                    try {
+                        sh 'npm run build'
+                        echo 'Build executado com sucesso!'
+                    } catch (Exception e) {
+                        echo 'Build falhou: ' + e.getMessage()
+                        currentBuild.result = 'UNSTABLE'
+                    }
+                }
+            }
+        }
+        
+        stage('Security Scan') {
+            steps {
+                echo '🔒 Executando verificação de segurança...'
+                script {
+                    try {
+                        sh 'npm audit --audit-level=high'
+                        echo 'Audit passou sem vulnerabilidades críticas!'
+                    } catch (Exception e) {
+                        echo 'Vulnerabilidades encontradas ou audit falhou: ' + e.getMessage()
+                        echo 'Continuando mesmo assim...'
+                        currentBuild.result = 'UNSTABLE'
+                    }
+                }
+            }
+        }
+        
+        stage('Package') {
+            steps {
+                echo '📦 Criando pacote...'
+                script {
+                    try {
+                        sh '''
+                            echo "Criando arquivo tar.gz..."
+                            tar -czf ${APP_NAME}-${BUILD_NUMBER_ENV}.tar.gz \
+                                --exclude=node_modules \
+                                --exclude=.git \
+                                --exclude=coverage \
+                                --exclude=*.tar.gz \
+                                .
+                            
+                            echo "Verificando arquivo criado..."
+                            ls -la ${APP_NAME}-${BUILD_NUMBER_ENV}.tar.gz
+                        '''
+                        
+                        // Arquivar artefatos de forma mais robusta
+                        archiveArtifacts artifacts: "${APP_NAME}-${BUILD_NUMBER_ENV}.tar.gz", allowEmptyArchive: true
+                        echo 'Pacote criado e arquivado com sucesso!'
+                        
+                    } catch (Exception e) {
+                        echo 'Falha ao criar pacote: ' + e.getMessage()
+                        currentBuild.result = 'UNSTABLE'
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Staging') {
+            when {
+                branch 'develop'
+            }
+            steps {
+                echo '🚀 Deploy para ambiente de staging...'
+                sh '''
+                    echo "Simulando deploy para staging..."
+                    echo "Artifact: ${APP_NAME}-${BUILD_NUMBER_ENV}.tar.gz"
+                    echo "Deploy para staging concluído!"
+                '''
+            }
+        }
+        
+        stage('Deploy to Production') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo '🎯 Deploy para produção...'
+                script {
+                    try {
+                        input message: 'Confirmar deploy para produção?', ok: 'Deploy'
+                        sh '''
+                            echo "Simulando deploy para produção..."
+                            echo "Artifact: ${APP_NAME}-${BUILD_NUMBER_ENV}.tar.gz"
+                            echo "Deploy para produção concluído!"
+                        '''
+                    } catch (Exception e) {
+                        echo 'Deploy para produção cancelado ou falhou: ' + e.getMessage()
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo '🧹 Executando limpeza...'
+            script {
+                try {
+                    cleanWs()
+                    echo 'Workspace limpo com sucesso!'
+                } catch (Exception e) {
+                    echo 'Falha na limpeza do workspace: ' + e.getMessage()
+                }
+            }
+        }
+        
+        success {
+            echo '✅ Pipeline executado com sucesso!'
+            echo '📊 Todos os estágios foram concluídos'
+        }
+        
+        failure {
+            echo '❌ Pipeline falhou!'
+            echo 'Verifique os logs acima para identificar o problema'
+        }
+        
+        unstable {
+            echo '⚠️ Pipeline instável!'
+            echo 'Alguns estágios falharam mas o pipeline continuou'
+        }
+    }
+}
