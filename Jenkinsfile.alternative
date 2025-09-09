@@ -78,7 +78,7 @@ pipeline {
                 always {
                     // Publicar relatórios de teste se existirem
                     script {
-                        if (fileExists('coverage/lcov.info')) {
+                        if (fileExists('coverage/index.html')) {
                             publishHTML([
                                 allowMissing: false,
                                 alwaysLinkToLastBuild: true,
@@ -87,6 +87,9 @@ pipeline {
                                 reportFiles: 'index.html',
                                 reportName: 'Coverage Report'
                             ])
+                            echo 'Relatório de cobertura publicado'
+                        } else {
+                            echo 'Relatório de cobertura não encontrado'
                         }
                     }
                 }

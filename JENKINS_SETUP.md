@@ -127,7 +127,28 @@ Na seção **Pipeline**:
 1. **Definition**: Pipeline script from SCM
 2. **SCM**: Git
 3. **Repository URL**: URL do seu repositório Git
-4. **Branch Specifier**: `*/main` (ou a branch principal)
+4. **Branch Specifier**: `*/master` (sua branch atual)
+5. **Script Path**: `Jenkinsfile` (veja opções abaixo)
+
+**📁 Opções de Jenkinsfile Disponíveis:**
+
+Este projeto inclui três versões do Jenkinsfile:
+
+- **`Jenkinsfile`** - Versão completa (requer Node.js configurado + pode ter erros com publishTestResults)
+- **`Jenkinsfile.simple`** - ✅ **Versão recomendada** (funciona sem configuração extra)
+- **`Jenkinsfile.alternative`** - Instala Node.js automaticamente (para sistemas Linux)
+
+**💡 Para usar a versão simplificada (recomendado):**
+```bash
+cd /Users/bernardomennndes/Documents/projects/university/jenkins
+mv Jenkinsfile Jenkinsfile.original
+mv Jenkinsfile.simple Jenkinsfile
+git add .
+git commit -m "Usar Jenkinsfile simplificado"
+git push
+```
+
+Depois altere o **Script Path** para: `Jenkinsfile`
 5. **Script Path**: `Jenkinsfile`
 
 **Método 2 - Interface Moderna (Blue Ocean):**

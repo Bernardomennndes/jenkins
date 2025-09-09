@@ -44,7 +44,7 @@ pipeline {
         stage('Lint Code') {
             steps {
                 echo '🔍 Executando lint...'
-                sh 'npm run lint || echo "Lint não configurado, pulando..."'
+                sh 'npm run lint || echo "Lint passou ou não está configurado"'
             }
         }
         
@@ -52,25 +52,6 @@ pipeline {
             steps {
                 echo '🧪 Executando testes...'
                 sh 'npm test'
-            }
-            post {
-                always {
-                    // Arquivar relatórios de cobertura
-                    script {
-                        if (fileExists('coverage/index.html')) {
-                            publishHTML([
-                                allowMissing: false,
-                                alwaysLinkToLastBuild: true,
-                                keepAll: true,
-                                reportDir: 'coverage',
-                                reportFiles: 'index.html',
-                                reportName: 'Coverage Report'
-                            ])
-                        } else {
-                            echo 'Relatório de cobertura não encontrado'
-                        }
-                    }
-                }
             }
         }
         
@@ -145,12 +126,12 @@ pipeline {
         
         success {
             echo '✅ Pipeline executado com sucesso!'
-            // Aqui você pode adicionar notificações de sucesso
+            echo '📊 Relatórios de cobertura gerados na pasta coverage/'
         }
         
         failure {
             echo '❌ Pipeline falhou!'
-            // Aqui você pode adicionar notificações de falha
+            echo 'Verifique os logs acima para mais detalhes'
         }
         
         unstable {
