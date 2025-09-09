@@ -1,15 +1,9 @@
 pipeline {
     agent any
     
-    tools {
-        nodejs 'Node18'  // Nome da instalação Node.js configurada no Jenkins
-    }
-    
     environment {
-        NODE_VERSION = '18'
         APP_NAME = 'jenkins-cicd-node-project'
         BUILD_NUMBER_ENV = "${env.BUILD_NUMBER}"
-        PATH = "${tool 'Node18'}/bin:${env.PATH}"
     }
     
     stages {
@@ -22,14 +16,21 @@ pipeline {
         
         stage('Setup Node.js') {
             steps {
-                echo '⚙️ Configurando Node.js...'
+                echo '⚙️ Instalando Node.js...'
                 sh '''
-                    echo "Verificando Node.js..."
-                    which node
-                    node --version
-                    which npm
-                    npm --version
-                    echo "Node.js configurado com sucesso!"
+                    # Instalar Node.js usando NodeSource
+                    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - || echo "Falha na configuração do repositório Node.js"
+                    sudo apt-get install -y nodejs || echo "Falha na instalação do Node.js via apt"
+                    
+                    # Verificar se Node.js foi instalado
+                    if ! command -v node &> /dev/null; then
+                        echo "Tentando instalar Node.js via snap..."
+                        sudo snap install node --classic || echo "Falha na instalação via snap"
+                    fi
+                    
+                    # Verificar versões
+                    node --version || echo "Node.js não está disponível"
+                    npm --version || echo "npm não está disponível"
                 '''
             }
         }
@@ -37,39 +38,57 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 echo '📦 Instalando dependências...'
-                sh 'npm ci'
+                sh '''
+                    if command -v npm &> /dev/null; then
+                        npm ci
+                    else
+                        echo "❌ npm não disponível, pulando instalação de dependências"
+                        exit 1
+                    fi
+                '''
             }
         }
         
         stage('Lint Code') {
             steps {
                 echo '🔍 Executando lint...'
-                sh 'npm run lint || echo "Lint não configurado, pulando..."'
+                sh '''
+                    if command -v npm &> /dev/null; then
+                        npm run lint || echo "Lint não configurado ou falhou"
+                    else
+                        echo "npm não disponível, pulando lint"
+                    fi
+                '''
             }
         }
         
         stage('Run Tests') {
             steps {
                 echo '🧪 Executando testes...'
-                sh 'npm test'
+                sh '''
+                    if command -v npm &> /dev/null; then
+                        npm test
+                    else
+                        echo "❌ npm não disponível, não é possível executar testes"
+                        exit 1
+                    fi
+                '''
             }
             post {
                 always {
-                    // Publicar relatórios de teste
-                    publishTestResults(
-                        testResultsPattern: 'coverage/lcov.info',
-                        allowEmptyResults: true
-                    )
-                    
-                    // Arquivar relatórios de cobertura
-                    publishHTML([
-                        allowMissing: false,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'coverage',
-                        reportFiles: 'index.html',
-                        reportName: 'Coverage Report'
-                    ])
+                    // Publicar relatórios de teste se existirem
+                    script {
+                        if (fileExists('coverage/lcov.info')) {
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: 'coverage',
+                                reportFiles: 'index.html',
+                                reportName: 'Coverage Report'
+                            ])
+                        }
+                    }
                 }
             }
         }
@@ -77,7 +96,14 @@ pipeline {
         stage('Build') {
             steps {
                 echo '🏗️ Executando build...'
-                sh 'npm run build'
+                sh '''
+                    if command -v npm &> /dev/null; then
+                        npm run build
+                    else
+                        echo "❌ npm não disponível, build não pode ser executado"
+                        exit 1
+                    fi
+                '''
             }
         }
         
@@ -85,7 +111,11 @@ pipeline {
             steps {
                 echo '🔒 Executando verificação de segurança...'
                 sh '''
-                    npm audit --audit-level=high || echo "Vulnerabilidades encontradas, mas continuando..."
+                    if command -v npm &> /dev/null; then
+                        npm audit --audit-level=high || echo "Vulnerabilidades encontradas, mas continuando..."
+                    else
+                        echo "npm não disponível, pulando verificação de segurança"
+                    fi
                 '''
             }
         }
@@ -145,12 +175,11 @@ pipeline {
         
         success {
             echo '✅ Pipeline executado com sucesso!'
-            // Aqui você pode adicionar notificações de sucesso
         }
         
         failure {
             echo '❌ Pipeline falhou!'
-            // Aqui você pode adicionar notificações de falha
+            echo 'Verifique se Node.js está configurado corretamente no Jenkins'
         }
         
         unstable {

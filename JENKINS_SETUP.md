@@ -149,14 +149,33 @@ Na seção **Pipeline**:
 3. Selecione onde está seu código (GitHub, Bitbucket, Git)
 4. Siga o assistente para conectar seu repositório
 
-### Passo 3: Configurar Node.js
+### Passo 3: Configurar Node.js (OBRIGATÓRIO)
 
-1. Vá em "Manage Jenkins" > "Global Tool Configuration"
-2. Na seção **NodeJS**:
-   - Clique em "Add NodeJS"
-   - Nome: `Node18`
-   - Versão: `18.x` (mais recente)
-   - Marque "Install automatically"
+**Antes de executar o pipeline, você DEVE configurar o Node.js no Jenkins:**
+
+1. **Vá em "Manage Jenkins"** (menu lateral)
+2. **Clique em "Global Tool Configuration"**
+3. **Role até a seção "NodeJS"**
+4. **Clique em "Add NodeJS"**
+5. **Configure:**
+   - **Name**: `Node18` (exatamente esse nome!)
+   - **Install automatically**: ✅ Marque esta opção
+   - **Version**: Selecione "NodeJS 18.x" (versão mais recente)
+   - **Global npm packages to install**: deixe vazio
+6. **Clique em "Save"**
+
+**⚠️ IMPORTANTE**: O nome deve ser exatamente `Node18` pois o Jenkinsfile está configurado para usar esse nome.
+
+### Passo 4: Instalar Plugin NodeJS (se necessário)
+
+Se a seção "NodeJS" não aparecer:
+
+1. **Vá em "Manage Jenkins" > "Manage Plugins"**
+2. **Aba "Available"**
+3. **Procure por "NodeJS"**
+4. **Marque o plugin "NodeJS Plugin"**
+5. **Clique em "Install without restart"**
+6. **Aguarde a instalação e volte ao Passo 3**
 
 ### Passo 4: Configurar Webhooks (Opcional)
 
@@ -297,6 +316,27 @@ O pipeline será executado automaticamente quando:
 ## 🐛 Troubleshooting
 
 ### Problemas Comuns
+
+**"Node.js não encontrado" ou "npm não encontrado" no pipeline:**
+
+⚠️ **SOLUÇÃO IMEDIATA:**
+
+1. **Configure o Node.js no Jenkins primeiro:**
+   - Vá em "Manage Jenkins" > "Global Tool Configuration"
+   - Adicione NodeJS com nome exato: `Node18`
+   - Marque "Install automatically"
+   - Salve a configuração
+
+2. **Se ainda não funcionar, use o Jenkinsfile alternativo:**
+   ```bash
+   # Renomeie o Jenkinsfile atual
+   mv Jenkinsfile Jenkinsfile.original
+   
+   # Use o Jenkinsfile alternativo que instala Node.js automaticamente
+   mv Jenkinsfile.alternative Jenkinsfile
+   ```
+
+3. **Execute o pipeline novamente**
 
 **"This page may not exist, or you may not have permission to see it":**
 
